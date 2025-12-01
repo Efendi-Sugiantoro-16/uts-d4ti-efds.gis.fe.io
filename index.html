@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIS Apps - Location Management System</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet Draw Plugin -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    
+    <style>
+        /* CSS Reset and Basic Setup */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            height: 60px;
+            background: white;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        .status-text {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .menu-toggle:hover {
+            background: #f3f4f6;
+        }
+
+        /* Main Container */
+        .main-container {
+            flex: 1;
+            display: flex;
+            height: calc(100vh - 60px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 350px;
+            background: white;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            height: calc(100vh - 60px);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            flex-shrink: 0;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: #f9fafb;
+            color: #374151;
+        }
+
+        .tab-btn.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+            background: #f0f9ff;
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow: visible;
+            min-height: 0;
+            position: relative;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        /* Form Section */
+        .form-section {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .form-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-readonly {
+            background: #f9fafb;
+            cursor: not-allowed;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* Search Section */
+        .search-section {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        /* Count Section */
+        .count-section {
+            padding: 8px 20px;
+            background: #f9fafb;
+            border-bottom: 1px solid #eee;
+        }
+
+        .count-section span {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        /* Locations List */
+        .locations-list {
+            padding: 0;
+            background: white;
+            position: relative;
+        }
+
+        /* Force scrollbar visibility */
+        .locations-list::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .locations-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 6px;
+        }
+
+        .locations-list::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 6px;
+            border: 2px solid #f1f1f1;
+        }
+
+        .locations-list::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Firefox scrollbar */
+        .locations-list {
+            scrollbar-width: thin;
+            scrollbar-color: #c1c1c1 #f1f1f1;
+        }
+
+        .locations-list.scrollable {
+            box-shadow: inset -2px 0 0 rgba(0,0,0,0.1);
+        }
+
+        .locations-list.scrollable:hover {
+            box-shadow: inset -2px 0 0 rgba(59, 130, 246, 0.3);
+        }
+
+        .location-card {
+            border-bottom: 1px solid #eee;
+            padding: 16px 20px;
+            transition: background-color 0.2s;
+        }
+
+        .location-card:hover {
+            background: #f9fafb;
+        }
+
+        .location-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .location-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+            flex: 1;
+        }
+
+        .location-category {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+
+        .location-description {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .location-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .location-coords {
+            font-size: 11px;
+            color: #9ca3af;
+            font-family: monospace;
+        }
+
+        .location-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #9ca3af;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .empty-text {
+            font-size: 14px;
+        }
+
+        /* Map Container */
+        .map-container {
+            flex: 1;
+            position: relative;
+            touch-action: none; /* FIXED: Enable touch events on mobile */
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            touch-action: pan-y pinch-zoom; /* FIXED: Allow map gestures */
+        }
+
+        /* Mobile-specific fixes */
+        @media (pointer: coarse) {
+            #map {
+                touch-action: manipulation;
+            }
+            
+            .location-card {
+                min-height: 60px; /* Larger touch targets */
+            }
+            
+            .btn {
+                min-height: 44px; /* iOS touch target size */
+                padding: 12px 16px;
+            }
+        }
+
+        /* Pulse Animation */
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -350px;
+                top: 60px;
+                height: calc(100vh - 60px);
+                z-index: 1000;
+                transition: left 0.3s ease;
+                box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+                max-height: calc(100vh - 60px);
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .menu-toggle {
+                display: block;
+            }
+
+            .header-right span {
+                display: none;
+            }
+
+            /* Mobile locations list */
+            .locations-list {
+                flex: 1;
+                min-height: 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sidebar {
+                width: 100%;
+                left: -100%;
+                max-height: calc(100vh - 60px);
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            /* Small mobile adjustments */
+            .locations-list {
+                flex: 1;
+                min-height: 0;
+            }
+
+            .location-card {
+                padding: 12px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-map-marked-alt" style="color: #2563eb; font-size: 24px;"></i>
+                <h1 class="header-title">GIS Apps</h1>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="status-indicator">
+                <div id="statusIndicator" class="status-dot"></div>
+                <span id="statusText">Online</span>
+            </div>
+            <button id="toggleSidebar" class="menu-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+            <!-- Tab Navigation -->
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" data-tab="locations">
+                    <i class="fas fa-map-marker-alt"></i> Lokasi
+                </button>
+                <button class="tab-btn" data-tab="layers">
+                    <i class="fas fa-layer-group"></i> Layers
+                </button>
+                <button class="tab-btn" data-tab="tools">
+                    <i class="fas fa-tools"></i> Tools
+                </button>
+            </div>
+
+            <!-- Tab Contents -->
+            <div id="locations-tab" class="tab-content active">
+                <!-- Add Location Form -->
+                <div class="form-section">
+                    <h3 class="form-title">
+                        <i class="fas fa-plus-circle" style="color: #2563eb; margin-right: 8px;"></i>
+                        Tambah Lokasi Baru
+                    </h3>
+                    <form id="locationForm">
+                        <div class="form-group">
+                            <label class="form-label" for="locationName">Nama Lokasi</label>
+                            <input type="text" id="locationName" class="form-input" placeholder="Masukkan nama lokasi" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="locationCategory">Kategori</label>
+                            <select id="locationCategory" class="form-select">
+                                <option value="poi">Point of Interest</option>
+                                <option value="restaurant">Restoran</option>
+                                <option value="hotel">Hotel</option>
+                                <option value="shopping">Pusat Belanja</option>
+                                <option value="education">Pendidikan</option>
+                                <option value="health">Kesehatan</option>
+                                <option value="transport">Transportasi</option>
+                                <option value="other">Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="locationDescription">Deskripsi</label>
+                            <textarea id="locationDescription" class="form-textarea" placeholder="Masukkan deskripsi lokasi"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="locationAddress">Alamat</label>
+                            <input type="text" id="locationAddress" class="form-input" placeholder="Masukkan alamat lengkap">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="locationCoords">Koordinat</label>
+                            <input type="text" id="locationCoords" class="form-input form-readonly" placeholder="Klik pada peta untuk memilih koordinat" readonly>
+                            <small style="color: #6b7280; font-size: 12px; display: block; margin-top: 4px;">
+                                <i class="fas fa-info-circle"></i> Klik pada peta untuk memilih koordinat lokasi
+                            </small>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="fas fa-save"></i> Simpan Lokasi
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Search Section -->
+                <div class="search-section">
+                    <input type="text" id="searchLocations" class="search-input" placeholder="Cari lokasi...">
+                </div>
+
+                <!-- Count Section -->
+                <div class="count-section">
+                    <span id="locationCount">0 lokasi</span>
+                </div>
+
+                <!-- Locations List -->
+                <div id="locationsList" class="locations-list">
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-map-marked-alt"></i>
+                        </div>
+                        <div class="empty-title">Belum ada lokasi</div>
+                        <div class="empty-text">Tambahkan lokasi baru untuk memulai</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="layers-tab" class="tab-content">
+                <div style="padding: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">
+                        <i class="fas fa-layer-group" style="color: #2563eb; margin-right: 8px;"></i>
+                        Map Layers
+                    </h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" checked style="margin: 0;">
+                            <span>OpenStreetMap</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" style="margin: 0;">
+                            <span>Satellite</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" style="margin: 0;">
+                            <span>Terrain</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tools-tab" class="tab-content">
+                <div style="padding: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">
+                        <i class="fas fa-tools" style="color: #2563eb; margin-right: 8px;"></i>
+                        Drawing Tools
+                    </h3>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button class="btn" style="justify-content: flex-start; background: #f3f4f6; color: #374151;">
+                            <i class="fas fa-pencil-alt" style="margin-right: 8px;"></i>Draw Polygon
+                        </button>
+                        <button class="btn" style="justify-content: flex-start; background: #f3f4f6; color: #374151;">
+                            <i class="fas fa-circle" style="margin-right: 8px;"></i>Draw Circle
+                        </button>
+                        <button class="btn" style="justify-content: flex-start; background: #f3f4f6; color: #374151;">
+                            <i class="fas fa-trash" style="margin-right: 8px;"></i>Clear All
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Map Container -->
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div id="locationModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000;">
+        <div style="background: white; border-radius: 8px; max-width: 500px; max-height: 80vh; overflow-y: auto; margin: 20px;">
+            <div style="padding: 20px; border-bottom: 1px solid #ddd;">
+                <h2 id="locationModalTitle" style="margin: 0; font-size: 18px;">Detail Lokasi</h2>
+            </div>
+            <div id="locationModalContent" style="padding: 20px;">
+                <!-- Modal content will be rendered here -->
+            </div>
+            <div style="padding: 20px; border-top: 1px solid #ddd; display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="closeLocationModal()" style="padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 4000;">
+        <div style="background: white; border-radius: 8px; padding: 20px; text-align: center;">
+            <div style="margin-bottom: 12px;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #3b82f6;"></i>
+            </div>
+            <div style="font-weight: bold; color: #1f2937;">Memproses...</div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" style="position: fixed; top: 20px; right: 20px; z-index: 3000; display: none;">
+        <div style="background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 16px; min-width: 300px;">
+            <div style="display: flex; align-items: center;">
+                <div id="toastIcon" style="margin-right: 12px;"></div>
+                <div>
+                    <div id="toastTitle" style="font-weight: bold; margin-bottom: 4px;"></div>
+                    <div id="toastMessage" style="font-size: 14px; color: #666;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="../js/storage.js"></script>
+    <script src="../js/map.js"></script>
+    <script src="../js/tools.js"></script>
+    <script src="../js/app-new.js"></script>
+
+</body>
+</html>
