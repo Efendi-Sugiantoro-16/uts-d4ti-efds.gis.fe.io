@@ -1,7 +1,8 @@
 // Main Application JavaScript - Clean Version
 class GISApps {
     constructor() {
-        this.apiBase = 'http://localhost:8081/api';
+        // FIXED: Use relative API path for GitHub Pages compatibility
+        this.apiBase = window.location.hostname === 'localhost' ? 'http://localhost:8081/api' : './api';
         this.storage = null;
         this.locations = [];
         this.selectedCoords = null;
@@ -455,10 +456,29 @@ class GISApps {
                     type: 'Point',
                     coordinates: [106.822698, -6.193744]
                 }
+            },
+            {
+                id: 'sample-3',
+                name: 'Taman Mini Indonesia Indah',
+                category: 'poi',
+                description: 'Taman budaya dengan anjungan seluruh provinsi Indonesia',
+                address: 'Jl. Taman Mini, Jakarta Timur',
+                coordinates: {
+                    type: 'Point',
+                    coordinates: [106.8895, -6.3024]
+                }
             }
         ];
+        
+        // Save sample data to localStorage for persistence
+        if (this.storage) {
+            this.storage.setLocalLocations(this.locations);
+        }
+        
         this.renderLocationsList();
         this.updateMapMarkers();
+        
+        this.showToast('info', 'Sample Data', 'Loaded sample locations for demonstration');
     }
 
     renderLocationsList() {
@@ -788,6 +808,69 @@ class GISApps {
             this.showLoading(false);
         }
     }
+
+    // Modal functions
+    showLocationModal(locationId) {
+        const location = this.locations.find(loc => loc.id === locationId);
+        if (!location) {
+            this.showToast('error', 'Error', 'Lokasi tidak ditemukan');
+            return;
+        }
+
+        const modal = document.getElementById('locationModal');
+        const modalTitle = document.getElementById('locationModalTitle');
+        const modalContent = document.getElementById('locationModalContent');
+
+        if (!modal || !modalTitle || !modalContent) {
+            console.error('Modal elements not found');
+            return;
+        }
+
+        modalTitle.textContent = location.name || 'Detail Lokasi';
+        
+        const coords = location.coordinates ? location.coordinates.coordinates : [0, 0];
+        
+        modalContent.innerHTML = `
+            <div style="space-y-4;">
+                <div>
+                    <strong>Nama:</strong> ${this.escapeHtml(location.name || 'Unknown')}
+                </div>
+                <div>
+                    <strong>Kategori:</strong> ${location.category || 'other'}
+                </div>
+                ${location.description ? `
+                    <div>
+                        <strong>Deskripsi:</strong> ${this.escapeHtml(location.description)}
+                    </div>
+                ` : ''}
+                ${location.address ? `
+                    <div>
+                        <strong>Alamat:</strong> ${this.escapeHtml(location.address)}
+                    </div>
+                ` : ''}
+                <div>
+                    <strong>Koordinat:</strong> ${coords[1].toFixed(6)}, ${coords[0].toFixed(6)}
+                </div>
+                <div style="margin-top: 16px; display: flex; gap: 8px;">
+                    <button onclick="window.zoomToLocation('${location.id}')" style="padding: 8px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-search"></i> Zoom
+                    </button>
+                    <button onclick="window.editLocation('${location.id}')" style="padding: 8px 12px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                </div>
+            </div>
+        `;
+
+        modal.style.display = 'flex';
+    }
+
+    closeLocationModal() {
+        const modal = document.getElementById('locationModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
 }
 
 // Initialize app when DOM is ready
@@ -795,11 +878,35 @@ let app;
 
 document.addEventListener('DOMContentLoaded', () => {
     try {
+        console.log('Initializing GIS Apps...');
         app = new GISApps();
         window.app = app;
         console.log('GIS Apps initialized successfully');
+        
+        // Add global error handler
+        window.addEventListener('error', function(e) {
+            console.error('Global error:', e.error);
+        });
+        
+        // Add unhandled promise rejection handler
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Unhandled promise rejection:', e.reason);
+        });
+        
     } catch (error) {
         console.error('Error initializing GIS Apps:', error);
+        // Show user-friendly error message
+        document.body.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: Arial, sans-serif;">
+                <div style="text-align: center; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: white;">
+                    <h2 style="color: #ef4444; margin-bottom: 16px;">Application Error</h2>
+                    <p style="color: #666; margin-bottom: 16px;">Failed to initialize GIS application.</p>
+                    <button onclick="location.reload()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Reload Page
+                    </button>
+                </div>
+            </div>
+        `;
     }
 });
 
@@ -819,5 +926,17 @@ window.editLocation = function(locationId) {
 window.deleteLocation = function(locationId) {
     if (window.app) {
         window.app.deleteLocation(locationId);
+    }
+};
+
+window.closeLocationModal = function() {
+    if (window.app) {
+        window.app.closeLocationModal();
+    } else {
+        // Fallback if app not initialized
+        const modal = document.getElementById('locationModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
     }
 };

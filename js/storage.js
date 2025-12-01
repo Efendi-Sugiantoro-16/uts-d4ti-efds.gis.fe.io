@@ -31,6 +31,13 @@ class StorageManager {
     // Check if backend is available
     async checkBackendConnection() {
         try {
+            // FIXED: For GitHub Pages, always use localStorage (no backend)
+            if (window.location.hostname !== 'localhost') {
+                this.isBackendAvailable = false;
+                console.log('GitHub Pages detected - using localStorage only');
+                return false;
+            }
+            
             // Health endpoint is at /health, not /api/health
             const baseUrl = this.apiBase.replace('/api', '');
             const response = await fetch(`${baseUrl}/health`);

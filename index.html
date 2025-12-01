@@ -679,6 +679,27 @@
     <script src="js/map.js"></script>
     <script src="js/tools.js"></script>
     <script src="js/app-new.js"></script>
+    
+    <!-- Initialize App -->
+    <script>
+        // Global function for modal close
+        window.closeLocationModal = function() {
+            const modal = document.getElementById('locationModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        };
+        
+        // Initialize app when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing GIS Apps...');
+            if (window.app) {
+                console.log('App initialized successfully');
+            } else {
+                console.error('App initialization failed');
+            }
+        });
+    </script>
 
 </body>
 </html>
